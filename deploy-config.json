@@ -9,7 +9,7 @@
     "postgres": false
   },
   "env_variables": {
-    "WHAT": "OKAY"
+    "Q": "W"
   },
   "namespace": "utils",
   "port": 8000,
