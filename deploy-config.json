@@ -1,6 +1,6 @@
 {
-  "github_repo_link": "https://github.com/test-org-hkm/f1b",
-  "domain_name": "f1b",
+  "github_repo_link": "https://github.com/nammayatri-ai/twoseptf1b",
+  "domain_name": "twoseptf1b",
   "cpu": "200m",
   "ram": "512Mi",
   "databases": {
@@ -8,7 +8,9 @@
     "redis": false,
     "postgres": false
   },
-  "env_variables": {},
+  "env_variables": {
+    "HIKEY": "HIVALUE"
+  },
   "namespace": "utils",
   "port": 8000,
   "replicas": 1
