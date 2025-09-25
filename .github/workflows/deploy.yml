@@ -7,7 +7,7 @@ on:
 
 env:
   SERVER_BASE_URL: ${{ secrets.SERVER_BASE_URL }}
-  DOMAIN_NAME: f1b
+  DOMAIN_NAME: twoseptf1b
   NAMESPACE: utils
 
 jobs:
@@ -51,6 +51,12 @@ jobs:
           ECR_REPOSITORY: ${{ github.event.repository.name }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          # Check if Dockerfile exists
+          if [ ! -f "Dockerfile" ]; then
+            echo "Error: Dockerfile not found. Please ensure your repository has a Dockerfile or contact support."
+            exit 1
+          fi
+          
           docker build -t $ECR_REGISTRY/$ECR_NAMESPACE/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_NAMESPACE/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_NAMESPACE/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
