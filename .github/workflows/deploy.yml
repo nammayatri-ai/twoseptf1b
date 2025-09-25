@@ -78,6 +78,14 @@ jobs:
       - name: Check if deployment exists via API
         id: check-deployment
         run: |
+          echo "=== DEBUG: Environment Variables ==="
+          echo "DOMAIN_NAME: ${{ env.DOMAIN_NAME }}"
+          echo "NAMESPACE: ${{ env.NAMESPACE }}"
+          echo "SERVER_BASE_URL: ${{ env.SERVER_BASE_URL }}"
+          echo "SERVER_API_TOKEN length: $(echo '${{ secrets.SERVER_API_TOKEN }}' | wc -c)"
+          echo "SERVER_API_TOKEN first 10 chars: $(echo '${{ secrets.SERVER_API_TOKEN }}' | cut -c1-10)"
+          echo "=== END DEBUG ==="
+          
           RESPONSE=$(curl -s -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.SERVER_API_TOKEN }}" \
