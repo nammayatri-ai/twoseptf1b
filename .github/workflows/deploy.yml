@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  SERVER_BASE_URL: https://columellar-rudolf-forgetfully.ngrok-free.dev
+  SERVER_BASE_URL: ${{ secrets.SERVER_BASE_URL }}
   DOMAIN_NAME: twoseptf1b
   NAMESPACE: utils
 
