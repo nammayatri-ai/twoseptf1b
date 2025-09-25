@@ -86,27 +86,79 @@ jobs:
           echo "SERVER_API_TOKEN first 10 chars: $(echo '${{ secrets.SERVER_API_TOKEN }}' | cut -c1-10)"
           echo "=== END DEBUG ==="
           
-          RESPONSE=$(curl -s -X POST \
+          # Prepare the request data
+          REQUEST_DATA='{"name":"${{ env.DOMAIN_NAME }}","namespace":"${{ env.NAMESPACE }}"}'
+          API_URL="${{ env.SERVER_BASE_URL }}/api/deployment/exists"
+          
+          echo "=== API REQUEST DEBUG ==="
+          echo "Request URL: $API_URL"
+          echo "Request Data: $REQUEST_DATA"
+          echo "Content-Type: application/json"
+          echo "Authorization: Bearer [REDACTED]"
+          echo "=== END API REQUEST DEBUG ==="
+          
+          # Make the API call with detailed error handling
+          echo "Making API call..."
+          HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/api_response.json -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.SERVER_API_TOKEN }}" \
-            -d '{"name":"${{ env.DOMAIN_NAME }}","namespace":"${{ env.NAMESPACE }}"}' \
-            "${{ env.SERVER_BASE_URL }}/api/deployment/exists")
+            -d "$REQUEST_DATA" \
+            "$API_URL")
           
-          echo "Full API Response: $RESPONSE"
+          echo "=== API RESPONSE DEBUG ==="
+          echo "HTTP Status Code: $HTTP_CODE"
+          echo "Response Body:"
+          cat /tmp/api_response.json
+          echo ""
+          echo "=== END API RESPONSE DEBUG ==="
           
-          if echo "$RESPONSE" | jq . &>/dev/null; then
-            EXISTS=$(echo "$RESPONSE" | jq -r 'if has("exists") then .exists else "false" end')
-            
-            if [ "$EXISTS" = "null" ]; then
+          # Handle different HTTP status codes
+          case $HTTP_CODE in
+            200)
+              echo "API call successful (200)"
+              ;;
+            401)
+              echo "ERROR: Unauthorized (401) - Check API token"
+              exit 1
+              ;;
+            404)
+              echo "ERROR: Not Found (404) - Check API endpoint URL"
+              exit 1
+              ;;
+            500)
+              echo "ERROR: Internal Server Error (500) - Check server logs"
+              exit 1
+              ;;
+            *)
+              echo "ERROR: Unexpected HTTP status code: $HTTP_CODE"
+              exit 1
+              ;;
+          esac
+          
+          # Parse the response
+          if [ -f /tmp/api_response.json ]; then
+            if echo "$(cat /tmp/api_response.json)" | jq . &>/dev/null; then
+              echo "Response is valid JSON"
+              EXISTS=$(cat /tmp/api_response.json | jq -r 'if has("exists") then .exists else "false" end')
+              
+              if [ "$EXISTS" = "null" ]; then
+                EXISTS="false"
+              fi
+            else
+              echo "ERROR: Response is not valid JSON"
+              echo "Raw response: $(cat /tmp/api_response.json)"
               EXISTS="false"
             fi
           else
-            echo "Warning: Received invalid response from API"
+            echo "ERROR: No response file found"
             EXISTS="false"
           fi
           
-          echo "Deployment exists value: $EXISTS"
+          echo "Final deployment exists value: $EXISTS"
           echo "exists=$EXISTS" >> $GITHUB_OUTPUT
+          
+          # Cleanup
+          rm -f /tmp/api_response.json
       
       - name: Apply config via API if deployment does not exist
         if: steps.check-deployment.outputs.exists == 'false'
