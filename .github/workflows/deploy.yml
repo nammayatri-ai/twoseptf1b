@@ -88,7 +88,8 @@ jobs:
           
           # Prepare the request data
           REQUEST_DATA='{"name":"${{ env.DOMAIN_NAME }}","namespace":"${{ env.NAMESPACE }}"}'
-          API_URL="${{ env.SERVER_BASE_URL }}/api/deployment/exists"
+          # Hardcode the URL for testing
+          API_URL="https://columellar-rudolf-forgetfully.ngrok-free.dev/api/deployment/exists"
           
           echo "=== API REQUEST DEBUG ==="
           echo "Request URL: $API_URL"
@@ -96,6 +97,14 @@ jobs:
           echo "Content-Type: application/json"
           echo "Authorization: Bearer [REDACTED]"
           echo "=== END API REQUEST DEBUG ==="
+          
+          # Test server connectivity first
+          echo "=== TESTING SERVER CONNECTIVITY ==="
+          HEALTH_URL="https://columellar-rudolf-forgetfully.ngrok-free.dev/"
+          echo "Testing health endpoint: $HEALTH_URL"
+          HEALTH_RESPONSE=$(curl -s -w "HTTP_CODE:%{http_code}" "$HEALTH_URL")
+          echo "Health check response: $HEALTH_RESPONSE"
+          echo "=== END SERVER CONNECTIVITY TEST ==="
           
           # Make the API call with detailed error handling
           echo "Making API call..."
