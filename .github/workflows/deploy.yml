@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  SERVER_BASE_URL: ${{ secrets.SERVER_BASE_URL }}
+  SERVER_BASE_URL: https://columellar-rudolf-forgetfully.ngrok-free.dev
   DOMAIN_NAME: twoseptf1b
   NAMESPACE: utils
 
@@ -78,96 +78,27 @@ jobs:
       - name: Check if deployment exists via API
         id: check-deployment
         run: |
-          echo "=== DEBUG: Environment Variables ==="
-          echo "DOMAIN_NAME: ${{ env.DOMAIN_NAME }}"
-          echo "NAMESPACE: ${{ env.NAMESPACE }}"
-          echo "SERVER_BASE_URL: ${{ env.SERVER_BASE_URL }}"
-          echo "SERVER_API_TOKEN length: $(echo '${{ secrets.SERVER_API_TOKEN }}' | wc -c)"
-          echo "SERVER_API_TOKEN first 10 chars: $(echo '${{ secrets.SERVER_API_TOKEN }}' | cut -c1-10)"
-          echo "=== END DEBUG ==="
-          
-          # Prepare the request data
-          REQUEST_DATA='{"name":"${{ env.DOMAIN_NAME }}","namespace":"${{ env.NAMESPACE }}"}'
-          # Hardcode the URL for testing
-          API_URL="https://columellar-rudolf-forgetfully.ngrok-free.dev/api/deployment/exists"
-          
-          echo "=== API REQUEST DEBUG ==="
-          echo "Request URL: $API_URL"
-          echo "Request Data: $REQUEST_DATA"
-          echo "Content-Type: application/json"
-          echo "Authorization: Bearer [REDACTED]"
-          echo "=== END API REQUEST DEBUG ==="
-          
-          # Test server connectivity first
-          echo "=== TESTING SERVER CONNECTIVITY ==="
-          HEALTH_URL="https://columellar-rudolf-forgetfully.ngrok-free.dev/"
-          echo "Testing health endpoint: $HEALTH_URL"
-          HEALTH_RESPONSE=$(curl -s -w "HTTP_CODE:%{http_code}" "$HEALTH_URL")
-          echo "Health check response: $HEALTH_RESPONSE"
-          echo "=== END SERVER CONNECTIVITY TEST ==="
-          
-          # Make the API call with detailed error handling
-          echo "Making API call..."
-          HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/api_response.json -X POST \
+          RESPONSE=$(curl -s -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.SERVER_API_TOKEN }}" \
-            -d "$REQUEST_DATA" \
-            "$API_URL")
+            -d '{"name":"${{ env.DOMAIN_NAME }}","namespace":"${{ env.NAMESPACE }}"}' \
+            "${{ env.SERVER_BASE_URL }}/api/deployment/exists")
           
-          echo "=== API RESPONSE DEBUG ==="
-          echo "HTTP Status Code: $HTTP_CODE"
-          echo "Response Body:"
-          cat /tmp/api_response.json
-          echo ""
-          echo "=== END API RESPONSE DEBUG ==="
+          echo "Full API Response: $RESPONSE"
           
-          # Handle different HTTP status codes
-          case $HTTP_CODE in
-            200)
-              echo "API call successful (200)"
-              ;;
-            401)
-              echo "ERROR: Unauthorized (401) - Check API token"
-              exit 1
-              ;;
-            404)
-              echo "ERROR: Not Found (404) - Check API endpoint URL"
-              exit 1
-              ;;
-            500)
-              echo "ERROR: Internal Server Error (500) - Check server logs"
-              exit 1
-              ;;
-            *)
-              echo "ERROR: Unexpected HTTP status code: $HTTP_CODE"
-              exit 1
-              ;;
-          esac
-          
-          # Parse the response
-          if [ -f /tmp/api_response.json ]; then
-            if echo "$(cat /tmp/api_response.json)" | jq . &>/dev/null; then
-              echo "Response is valid JSON"
-              EXISTS=$(cat /tmp/api_response.json | jq -r 'if has("exists") then .exists else "false" end')
-              
-              if [ "$EXISTS" = "null" ]; then
-                EXISTS="false"
-              fi
-            else
-              echo "ERROR: Response is not valid JSON"
-              echo "Raw response: $(cat /tmp/api_response.json)"
+          if echo "$RESPONSE" | jq . &>/dev/null; then
+            EXISTS=$(echo "$RESPONSE" | jq -r 'if has("exists") then .exists else "false" end')
+            
+            if [ "$EXISTS" = "null" ]; then
               EXISTS="false"
             fi
           else
-            echo "ERROR: No response file found"
+            echo "Warning: Received invalid response from API"
             EXISTS="false"
           fi
           
-          echo "Final deployment exists value: $EXISTS"
+          echo "Deployment exists value: $EXISTS"
           echo "exists=$EXISTS" >> $GITHUB_OUTPUT
-          
-          # Cleanup
-          rm -f /tmp/api_response.json
       
       - name: Apply config via API if deployment does not exist
         if: steps.check-deployment.outputs.exists == 'false'
