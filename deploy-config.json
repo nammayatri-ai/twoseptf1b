@@ -9,7 +9,7 @@
     "postgres": false
   },
   "env_variables": {
-    "Q": "W"
+    "bkey": "bvalue"
   },
   "namespace": "utils",
   "port": 8000,
